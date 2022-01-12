@@ -22,10 +22,9 @@ class PostController extends Controller
      */
     public function index()
     {
-        $posts = Post::when(isset(request()->search),function ($query){
-            $keyword = request()->search;
-            $query->orWhere('title','like','%'.$keyword.'%')->orWhere('description','like',"%$keyword%");
-        })->with(['user','category','photos'])->latest('id')->paginate(7);
+        $posts = Post::when(Auth::user()->role == 1,function ($query){
+            $query->where('user_id',Auth::id());
+        })->search()->latest('id')->paginate(7);
         return view('post.index',compact('posts'));
     }
 
@@ -49,14 +48,15 @@ class PostController extends Controller
      */
     public function store(StorePostRequest $request)
     {
+//        return $request;
         if (!Storage::exists('public/thumbnail')){
             Storage::makeDirectory('public/thumbnail');
         }
-//       return $request;
+
 
         $post= new Post();
         $post->title = $request->title;
-        $post->slug = Str::slug($request->title);
+        $post->slug = $request->title;
         $post->category_id = $request->category;
         $post->description  = $request->description;
         $post->excerpt  = Str::words($request->description);
@@ -64,9 +64,12 @@ class PostController extends Controller
         $post->isPublish = '1';
         $post->save();
 
+        $post->tags()->attach($request->tags);
+
+
         //hasFile?
-        if ($request->hasFile('photo')){
-            foreach ($request->file('photo') as $photo){
+        if ($request->hasFile('photos')){
+            foreach ($request->file('photos') as $photo){
                 $newName = uniqid()."_photo.".$photo->extension();
                 $photo->storeAs('public/photo',$newName);
 
@@ -98,6 +101,8 @@ class PostController extends Controller
      */
     public function show(Post $post)
     {
+//        return $post;
+
         return view('post.show',compact('post'));
     }
 
@@ -130,17 +135,16 @@ class PostController extends Controller
     {
         Gate::authorize('view',$post);
 
-        $request->validate([
-            'title'=>'required|min:3|unique:posts,title,'.$post->id,
-            'category'=>'required|exists:categories,id',
-            'description'=>'required|min:10'
-        ]);
+
         $post->title = $request->title;
-        $post->slug = Str::slug($request->title);
+        $post->slug = $request->title;
         $post->category_id = $request->category;
         $post->description  = $request->description;
         $post->excerpt  = Str::words($request->description);
         $post->update();
+
+        $post->tags()->detach();
+        $post->tags()->attach($request->tags);
         return redirect()->route('post.index')->with('status','success');
     }
 
@@ -152,7 +156,7 @@ class PostController extends Controller
      */
     public function destroy(Post $post)
     {
-        Gate::authorize('view',$post);
+        Gate::authorize('delete',$post);
 
 //        return $post;
 
@@ -162,13 +166,16 @@ class PostController extends Controller
             Storage::delete('public/thumbnail/'.$photo->name);
         }
 
+        //delete pivot records
+        $post->tags()->detach();
+
         //delete db records
         $post->photos()->delete();
 
         //post delete
         $post->delete();
 
-        return redirect()->route('post.index')->with('status','success');
+        return redirect()->route('post.index')->with('status','post deleted');
 
     }
 }

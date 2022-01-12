@@ -12,12 +12,33 @@
                             @csrf
 
                                     <div class="mb-3">
-                                        <label>Post Title</label>
+                                        <label>Post Category</label>
                                         <input type="text" name="title" value="{{old('title')}}" class="form-control @error('title') is-invalid @enderror">
                                         @error('title')
                                         <p class="text-danger small">{{$message}}</p>
                                         @enderror
                                     </div>
+
+                            <div class="mb-3">
+                                <label for="">Post Tags</label>
+                                <br>
+                                @foreach(\App\Models\Tag::all() as $tag)
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" {{in_array($tag->id,old('tags',[])) ? 'checked' : ''}} name="tags[]" value="{{$tag->id}}" id="tag{{$tag->id}}">
+                                    <label class="form-check-label" for="tag{{$tag->id}}">
+                                        {{$tag->title}}
+                                    </label>
+                                </div>
+                                @endforeach
+                                @error('tags')
+                                <p class="text-danger small">{{$message}}</p>
+                                @enderror
+                                @error('tags.*')
+                                <p class="text-danger small">{{$message}}</p>
+                                @enderror
+
+                            </div>
+
 
                                     <div class="mb-3">
                                         <label>Category</label>
@@ -30,12 +51,18 @@
                                         @enderror
                                     </div>
 
+                            <br>
+
                             <div class="mb-3">
                                 <label>Photo</label>
-                                <input type="file"  name="photo[]" value="{{old('photo')}}" class="form-control @error('photo') is-invalid @enderror" multiple>
-                                @error('photo')
+                                <input type="file"  name="photos[]" value="{{old('photo')}}" class="form-control @error('photo') is-invalid @enderror" multiple>
+                                @error('photos')
                                 <p class="text-danger small">{{$message}}</p>
                                 @enderror
+                                @error('photos.*')
+                                <p class="text-danger small">{{$message}}</p>
+                                @enderror
+
                             </div>
 
                                     <div class="mb-3">
